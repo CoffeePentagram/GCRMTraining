@@ -36,6 +36,16 @@
             from { opacity: 0; }
             to { opacity: 1; }
         }
+        
+        .save-pulse {
+            animation: savePulse 0.6s ease-in-out;
+        }
+        
+        @keyframes savePulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
     </style>
 </head>
 <body class="bg-white min-h-screen">
@@ -79,12 +89,29 @@
                         <span>Export Excel</span>
                     </button>
 
+                    <button onclick="saveChanges()" id="saveButton" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        <span>Save Changes</span>
+                    </button>
+
                     <button onclick="openModal()" class="bg-blue-700 hover:bg-blue-800 text-white px-6 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                         </svg>
                         <span>Add Task</span>
                     </button>
+                </div>
+            </div>
+
+            <!-- Save Status Indicator -->
+            <div id="saveStatus" class="hidden mb-4 p-3 rounded-lg bg-green-100 border border-green-200 text-green-700 text-sm font-medium">
+                <div class="flex items-center space-x-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span>All changes saved successfully!</span>
                 </div>
             </div>
 
@@ -188,6 +215,7 @@
     <script>
         let tasks = [];
         let currentFilter = 'all';
+        let hasUnsavedChanges = false;
 
         const statusColors = {
             'pending': { bg: 'bg-yellow-100', text: 'text-yellow-800', dot: 'bg-yellow-500' },
@@ -226,14 +254,14 @@
             };
             
             tasks.push(task);
-            saveToLocalStorage();
+            markUnsavedChanges();
             renderTasks();
             updateStats();
         }
 
         function deleteTask(id) {
             tasks = tasks.filter(t => t.id !== id);
-            saveToLocalStorage();
+            markUnsavedChanges();
             renderTasks();
             updateStats();
         }
@@ -242,7 +270,7 @@
             const task = tasks.find(t => t.id === id);
             if (task) {
                 task.status = newStatus;
-                saveToLocalStorage();
+                markUnsavedChanges();
                 renderTasks();
                 updateStats();
             }
@@ -255,7 +283,7 @@
                 const newQA = prompt('Enter QA Reviewer name:', currentQA);
                 if (newQA !== null) {
                     task.qaReviewer = newQA.trim();
-                    saveToLocalStorage();
+                    markUnsavedChanges();
                     renderTasks();
                 }
             }
@@ -270,6 +298,52 @@
             if (savedTasks) {
                 tasks = JSON.parse(savedTasks);
             }
+        }
+
+        function markUnsavedChanges() {
+            hasUnsavedChanges = true;
+            updateSaveButton();
+        }
+
+        function saveChanges() {
+            saveToLocalStorage();
+            hasUnsavedChanges = false;
+            updateSaveButton();
+            showSaveConfirmation();
+        }
+
+        function updateSaveButton() {
+            const saveButton = document.getElementById('saveButton');
+            if (hasUnsavedChanges) {
+                saveButton.classList.remove('bg-green-600', 'hover:bg-green-700');
+                saveButton.classList.add('bg-orange-600', 'hover:bg-orange-700');
+                saveButton.innerHTML = `
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.694-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                    </svg>
+                    <span>Save Changes</span>
+                `;
+            } else {
+                saveButton.classList.remove('bg-orange-600', 'hover:bg-orange-700');
+                saveButton.classList.add('bg-green-600', 'hover:bg-green-700');
+                saveButton.innerHTML = `
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span>Save Changes</span>
+                `;
+            }
+        }
+
+        function showSaveConfirmation() {
+            const saveStatus = document.getElementById('saveStatus');
+            saveStatus.classList.remove('hidden');
+            saveStatus.classList.add('save-pulse');
+            
+            setTimeout(() => {
+                saveStatus.classList.add('hidden');
+                saveStatus.classList.remove('save-pulse');
+            }, 3000);
         }
 
         function filterTasks(filter) {
@@ -447,6 +521,7 @@
         loadFromLocalStorage();
         renderTasks();
         updateStats();
+        updateSaveButton();
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97e131f70279cc7a',t:'MTc1NzY5ODg4MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
